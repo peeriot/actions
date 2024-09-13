@@ -71,7 +71,7 @@ if [ "$RUN_CARGO_CLIPPY" = "true" ]; then
             continue
         fi
 
-        cd "$PROJECT_ROOT/$PACKAGE"
+        cd "$PROJECT_ROOT/crates/$PACKAGE"
 
         printf "\n\n--== Run Linter for $PACKAGE ==--\n\n"
 
@@ -92,7 +92,7 @@ if [ "$RUN_CARGO_DOC" = "true" ]; then
             continue
         fi
 
-        cd "$PROJECT_ROOT/$PACKAGE"
+        cd "$PROJECT_ROOT/crates/$PACKAGE"
 
         printf "\n\n--== Check Doc for $PACKAGE ==--\n\n"
 
@@ -116,7 +116,7 @@ for ARGS in $PACKAGES; do
         EXPECTED_COVERAGE=""
     fi
 
-    cd "$PROJECT_ROOT/$PACKAGE"
+    cd "$PROJECT_ROOT/crates/$PACKAGE"
 
     if [ -n "$EXPECTED_COVERAGE" ]; then
         printf "\n\n--== Unit Tests (With Coverage) for $PACKAGE ==--\n\n"
@@ -165,7 +165,7 @@ for ARGS in $PACKAGES; do
         FILES="$FILES_TESTS $FILES_DOC_TESTS"
 
         # Generate the report
-        IGNORE=$(find "$PROJECT_ROOT" -mindepth 1 -maxdepth 1 -type d -not -name "$PACKAGE")
+        IGNORE=$(find "$PROJECT_ROOT/crates" -mindepth 1 -maxdepth 1 -type d -not -name "$PACKAGE")
         $CARGO cov -- \
             report \
                 --use-color \
@@ -173,7 +173,7 @@ for ARGS in $PACKAGES; do
                 --ignore-filename-regex='rustc/' \
                 --ignore-filename-regex='cargo/git' \
                 --ignore-filename-regex='cargo/registry' \
-                --ignore-filename-regex="$PROJECT_ROOT/$PACKAGE/tests" \
+                --ignore-filename-regex="$PROJECT_ROOT/crates/$PACKAGE/tests" \
                 $( for DIR in $IGNORE; do printf " %s=%s/" --ignore-filename-regex $DIR; done ) \
                 --instr-profile="$TMP_COVERAGE_DIR/merged.profdata" \
                 $( for FILE in $FILES; do printf " %s %s" -object $FILE; done )
@@ -207,7 +207,7 @@ for ARGS in $PACKAGES; do
                 --ignore-filename-regex='rustc/' \
                 --ignore-filename-regex='cargo/git' \
                 --ignore-filename-regex='cargo/registry' \
-                --ignore-filename-regex="$PROJECT_ROOT/$PACKAGE/tests" \
+                --ignore-filename-regex="$PROJECT_ROOT/crates/$PACKAGE/tests" \
                 $( for DIR in $IGNORE; do printf " %s=%s/" --ignore-filename-regex $DIR; done ) \
                 --instr-profile="$TMP_COVERAGE_DIR/merged.profdata" \
                 $( for FILE in $FILES; do printf " %s %s" -object $FILE; done ) \
