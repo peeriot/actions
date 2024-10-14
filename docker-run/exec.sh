@@ -40,6 +40,11 @@ if [ ! -z $DOCKER_RUN_USER ]; then
     SCRIPT="$SCRIPT; export HOME=/home/$DOCKER_RUN_USER"
 fi
 
+# Forward docker credentials
+if [ "$DOCKER_RUN_FORWARD_CREDENTIALS" == "true" ]; then
+    SCRIPT="$SCRIPT; echo \"$DOCKER_RUN_PASSWORD\" | docker login \"$DOCKER_RUN_REGISTRY\" -u \"$DOCKER_RUN_USERNAME\" --password-stdin"
+fi
+
 # Setup known hosts
 if [ "$DOCKER_RUN_SETUP_KNOWN_HOSTS" == "true" ]; then
     SCRIPT="$SCRIPT; mkdir -p ~/.ssh; ssh-keyscan -H github.com >> ~/.ssh/known_hosts"

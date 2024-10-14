@@ -6,6 +6,8 @@ SCRIPT_DIR="$(dirname $0)"
 SCRIPT_NAME="$(basename $0)"
 PROJECT_ROOT="$PROJECT_ROOT"
 
+VERBOSE="false"
+
 if [ -t 2 ]; then
     RED=`tput setaf 1 || echo ""`
     YELLOW=`tput setaf 3 || echo ""`
@@ -31,7 +33,10 @@ The general idea is that we use the \`License.lock\` file to create an appoved
 list of licences that is then checked by a suitable CI pipeline.
 
 Usage:
-    $SCRIPT_NAME [command]
+    $SCRIPT_NAME [options] [command]
+
+    Options:
+        -v | --verbose      Print additional output to stdout
 
     Commands:
         update              Extract the license information from the current
@@ -145,6 +150,10 @@ checkLicences() {
     local LICENSES=("$@")
     local TMP="false"
 
+    if [ "$VERBOSE" == "true" ]; then
+        echo "$NAME: ${LICENSES[@]}"
+    fi
+
     for LICENSE in "${LICENSES[@]}"; do
         if isBlacklisted "$LICENSE"; then
             fail "$BOLD$NAME$RESET has a blacklisted license: $LICENSE"
@@ -184,6 +193,24 @@ if [ ! -f "$MANIFEST_PATH" ]; then
 fi
 
 mkdir -p "$TARGET_DIR"
+
+# Handle options
+while true; do
+    case "$1" in
+        -v | --verbose)
+            VERBOSE="true"
+            shift
+            ;;
+
+        -*)
+            fail "Unknown option: -$1"
+            ;;
+
+        *)
+            break
+            ;;
+    esac
+done
 
 # Handle the command
 case "$1" in

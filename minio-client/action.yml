@@ -16,6 +16,9 @@ inputs:
     description: 'Name of the host alias'
     required: false
     default: host
+  ca_cert:
+    description: 'CA Cert to use for Minio Client'
+    required: false
 runs:
   using: 'composite'
   steps:
@@ -27,10 +30,11 @@ runs:
         MINIO_SECRET_KEY: ${{ inputs.secret_key }}
         MINIO_ALIAS: ${{ inputs.alias }}
         MINIO_RUN: ${{ inputs.run }}
+        MINIO_CA_CERT: ${{ inputs.ca_cert }}
       with:
-        image: minio/mc:RELEASE.2024-07-31T15-58-33Z
+        image: minio/mc:RELEASE.2024-10-08T09-37-26Z
         username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        password: ${{ github.token }}
         user: user
         setup_known_hosts: false
         run: ./.github/actions/minio-client/exec.sh

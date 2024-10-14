@@ -27,6 +27,10 @@ inputs:
   password:
     description: 'Password'
     required: false
+  forward_credentials:
+    description: 'Forward the docker credentials to the docker container'
+    required: false
+    default: false
   docker_network:
     description: 'Docker Network ID'
     default: ${{ job.container.network }}
@@ -56,6 +60,7 @@ runs:
         DOCKER_RUN_REGISTRY: ${{ inputs.registry }}
         DOCKER_RUN_USERNAME: ${{ inputs.username }}
         DOCKER_RUN_PASSWORD: ${{ inputs.password }}
+        DOCKER_RUN_FORWARD_CREDENTIALS: ${{ inputs.forward_credentials }}
         DOCKER_RUN_DOCKER_NETWORK: ${{ inputs.docker_network }}
         DOCKER_RUN_VOLUMES: ${{ inputs.volumes }}
         DOCKER_RUN_SSH_KEYS: ${{ inputs.ssh_keys }}
