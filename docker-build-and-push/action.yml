@@ -17,6 +17,9 @@ inputs:
     description: 'Docker build context'
     required: false
     default: .
+  file:
+    description: 'Path to Dockerfile'
+    required: false
   registry:
     description: 'Docker registry to push to'
     required: false
@@ -35,5 +38,6 @@ runs:
       uses: docker/build-push-action@v6.6.1
       with:
         context: ${{ inputs.context }}
+        file: ${{ inputs.file }}
         push: true
         tags: ${{ inputs.registry }}/${{ inputs.name }}:${{ inputs.version }},${{ inputs.registry }}/${{ inputs.name }}:latest
