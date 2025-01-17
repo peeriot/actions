@@ -5,8 +5,13 @@ inputs:
     description: 'Image'
     required: true
   user:
-    description: 'Run the container as the specified user'
+    description: |
+      Run the container as the specified user. Set this to `root` or an empty
+      string to run the container as root user. Otherwise the container is
+      started with the user and group id of the github runner and a suitable
+      $HOME directory is created for the specified username.
     required: false
+    default: user
   options:
     description: 'Options'
     required: false

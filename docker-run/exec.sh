@@ -19,7 +19,7 @@ if [ ! -z $DOCKER_RUN_DOCKER_NETWORK ]; then
 fi
 
 # Use the specified user
-if [ ! -z $DOCKER_RUN_USER ]; then
+if [ ! -z "$DOCKER_RUN_USER" ] && [ "$DOCKER_RUN_USER" != "root" ]; then
     USER_DIR="$RUNNER_TEMP/_home_$DOCKER_RUN_USER"
 
     USER_ID=$(id -u)
