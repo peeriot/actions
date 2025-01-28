@@ -6,7 +6,7 @@ SCRIPT="true"
 EXTRA_ARGS=()
 
 # Login to docker registry
-if [ ! -z $DOCKER_RUN_USERNAME ]; then
+if [ ! -z "$DOCKER_RUN_USERNAME" ]; then
     echo "$DOCKER_RUN_PASSWORD" | docker login "$DOCKER_RUN_REGISTRY" -u "$DOCKER_RUN_USERNAME" --password-stdin
 fi
 
@@ -14,8 +14,15 @@ fi
 docker pull "$DOCKER_RUN_IMAGE"
 
 # Join the specified docker network
-if [ ! -z $DOCKER_RUN_DOCKER_NETWORK ]; then
+if [ ! -z "$DOCKER_RUN_DOCKER_NETWORK" ]; then
     EXTRA_ARGS+=(--network "$DOCKER_RUN_DOCKER_NETWORK")
+fi
+
+# Set the entrypoint
+if [ "$DOCKER_RUN_REMOVE_ENTRYPOINT" == "true" ]; then
+    EXTRA_ARGS+=(--entrypoint "")
+elif [ ! -z "$DOCKER_RUN_ENTRYPOINT" ]; then
+    EXTRA_ARGS+=(--entrypoint "$DOCKER_RUN_ENTRYPOINT")
 fi
 
 # Use the specified user
@@ -88,14 +95,15 @@ for ENV in $(export -p | cut -d' ' -f3 | cut -d'=' -f1 | grep -vE '^(OLDPWD|PATH
 done
 
 # Bring up the container and execute the requested command
-SCRIPT="$SCRIPT; $DOCKER_RUN_RUN"
+if [ ! -z "$DOCKER_RUN_RUN" ]; then
+    SCRIPT="$SCRIPT; $DOCKER_RUN_RUN"
+fi
 
 exec docker run \
     --rm \
-    ${EXTRA_ARGS[@]} \
+    "${EXTRA_ARGS[@]}" \
     -v "/var/run/docker.sock":"/var/run/docker.sock" \
     -v "$GITHUB_WORKSPACE":"/github/workspace" \
     --workdir /github/workspace \
-    --entrypoint="$DOCKER_RUN_SHELL" \
     "$DOCKER_RUN_IMAGE" \
-        -c "$SCRIPT"
+        bash -c "$SCRIPT"

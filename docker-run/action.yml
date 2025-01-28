@@ -1,5 +1,9 @@
 name: 'Docker Run'
-description: 'Run a command in a new container'
+description: |
+  Run a command in a new container.
+
+  The container is expected to provide no entrypoint, or an entrypoint, that
+  evaluates the bash command passed to the container.
 inputs:
   image:
     description: 'Image'
@@ -12,16 +16,9 @@ inputs:
       $HOME directory is created for the specified username.
     required: false
     default: user
-  options:
-    description: 'Options'
-    required: false
   run:
     description: 'Run command in container'
     required: false
-  shell:
-    description: 'Use a specific shell'
-    required: false
-    default: sh
   registry:
     description: 'Registry'
     required: false
@@ -50,6 +47,14 @@ inputs:
   ssh_keys:
     description: 'List of base64 encoded keys to add to the SSH agent'
     required: false
+  entrypoint:
+    description: 'User defined entrypoint to start the container'
+    required: false
+  remove_entrypoint:
+    description: |
+      Remove the entry point for the container. The command is directly
+      passed by the arguments
+    required: false
 runs:
   using: 'composite'
   steps:
@@ -61,12 +66,13 @@ runs:
         DOCKER_RUN_USER: ${{ inputs.user }}
         DOCKER_RUN_OPTIONS: ${{ inputs.options }}
         DOCKER_RUN_RUN: ${{ inputs.run }}
-        DOCKER_RUN_SHELL: ${{ inputs.shell }}
         DOCKER_RUN_REGISTRY: ${{ inputs.registry }}
         DOCKER_RUN_USERNAME: ${{ inputs.username }}
         DOCKER_RUN_PASSWORD: ${{ inputs.password }}
         DOCKER_RUN_FORWARD_CREDENTIALS: ${{ inputs.forward_credentials }}
         DOCKER_RUN_DOCKER_NETWORK: ${{ inputs.docker_network }}
         DOCKER_RUN_VOLUMES: ${{ inputs.volumes }}
-        DOCKER_RUN_SSH_KEYS: ${{ inputs.ssh_keys }}
         DOCKER_RUN_SETUP_KNOWN_HOSTS: ${{ inputs.setup_known_hosts }}
+        DOCKER_RUN_SSH_KEYS: ${{ inputs.ssh_keys }}
+        DOCKER_RUN_ENTRYPOINT: ${{ inputs.entrypoint }}
+        DOCKER_RUN_REMOVE_ENTRYPOINT: ${{ inputs.remove_entrypoint }}

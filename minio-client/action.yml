@@ -37,4 +37,5 @@ runs:
         password: ${{ github.token }}
         user: user
         setup_known_hosts: false
+        remove_entrypoint: true
         run: ./.github/actions/minio-client/exec.sh

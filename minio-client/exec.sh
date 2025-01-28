@@ -3,6 +3,7 @@
 set -euo pipefail
 
 if [ ! -z "$MINIO_CA_CERT" ]; then
+    echo "Add certificate"
     mkdir -p ~/.mc/certs/CAs/
     echo -e "$MINIO_CA_CERT" > ~/.mc/certs/CAs/ca.crt
 fi
