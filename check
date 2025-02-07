@@ -17,10 +17,7 @@ RUN_CARGO_TEST=${RUN_CARGO_TEST:-true}
 # Globally enable or disable cargo test execution with code coverage
 RUN_CARGO_TEST_WITH_COVERAGE=${RUN_CARGO_TEST_WITH_COVERAGE:-true}
 
-# Globally enable or disable code coverage report generation
-GENERATE_COVERAGE_REPORT=${GENERATE_COVERAGE_REPORT:-false}
-
-# Globally enable or disable if the doc tests are included in the coverage test
+# Globally include doc tests in the coverage results
 INCLUDE_DOC_TESTS=${INCLUDE_DOC_TESTS:-false}
 
 PACKAGES=${PACKAGES:?"PACKAGES is unset!"}
@@ -133,7 +130,7 @@ for ARGS in $PACKAGES; do
               --output-path coverage/coverage.json
 
             cargo llvm-cov \
-              nextest \
+              report \
               -p "$PACKAGE" \
               --html \
               --output-dir coverage
