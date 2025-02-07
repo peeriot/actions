@@ -12,6 +12,7 @@ fi
 
 # Pull the image
 docker pull "$DOCKER_RUN_IMAGE"
+DOCKER_RUN_IMAGE_ID=$(docker images "$DOCKER_RUN_IMAGE" --format '{{.ID}}')
 
 # Join the specified docker network
 if [ ! -z "$DOCKER_RUN_DOCKER_NETWORK" ]; then
@@ -75,7 +76,7 @@ while IFS= read -r VOLUME; do
         continue;
     fi
 
-    VOLUME_NAME="$HOSTNAME-${PARTS[0]}"
+    VOLUME_NAME="$HOSTNAME-$DOCKER_RUN_IMAGE_ID-${PARTS[0]}"
     VOLUME_PATH="${PARTS[1]}"
 
     if ! docker volume ls --format '{{.Name}}' | grep -q "^${VOLUME_NAME}$"; then
