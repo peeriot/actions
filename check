@@ -132,15 +132,28 @@ for ARGS in $PACKAGES; do
             rm -rf $COVERAGE_DIR/$PACKAGE
             mkdir -p $COVERAGE_DIR/$PACKAGE
 
+            IGNORE_RX=$( \
+                cargo metadata \
+                    --format-version 1 \
+                    --no-deps \
+                | jq \
+                    -r \
+                    --arg pkg "$PACKAGE" \
+                    '.packages[] | select(.name != $pkg) | .manifest_path | sub("/Cargo.toml$"; "")' \
+                | paste -sd "|" \
+            )
+            
             cargo llvm-cov \
                 nextest \
                 -p "$PACKAGE" \
+                --ignore-filename-regex "$IGNORE_RX" \
                 --json \
                 --output-path $COVERAGE_DIR/$PACKAGE/coverage.json
 
             cargo llvm-cov \
                 report \
                 -p "$PACKAGE" \
+                --ignore-filename-regex "$IGNORE_RX" \
                 --html \
                 --output-dir $COVERAGE_DIR/$PACKAGE
         fi
