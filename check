@@ -23,6 +23,9 @@ INCLUDE_DOC_TESTS=${INCLUDE_DOC_TESTS:-false}
 # Additional arguments to pass to every call of `cargo`
 CARGO_EXTRA_ARGS=${CARGO_EXTRA_ARGS:-}
 
+# Directory to store the coverage reports in
+COVERAGE_DIR=${COVERAGE_DIR:-coverage}
+
 PACKAGES=${PACKAGES:?"PACKAGES is unset!"}
 PROJECT_ROOT="${PROJECT_ROOT:?"PROJECT_ROOT is unset!"}"
 
@@ -126,23 +129,23 @@ for ARGS in $PACKAGES; do
             # implement later, when there's a need. (it should be fairly straight-forward)
             # https://nexte.st/docs/integrations/test-coverage/
         else
-            rm -rf coverage/$PACKAGE
-            mkdir -p coverage/$PACKAGE
+            rm -rf $COVERAGE_DIR/$PACKAGE
+            mkdir -p $COVERAGE_DIR/$PACKAGE
 
             cargo llvm-cov \
                 nextest \
                 -p "$PACKAGE" \
                 --json \
-                --output-path coverage/$PACKAGE/coverage.json
+                --output-path $COVERAGE_DIR/$PACKAGE/coverage.json
 
             cargo llvm-cov \
                 report \
                 -p "$PACKAGE" \
                 --html \
-                --output-dir coverage/$PACKAGE
+                --output-dir $COVERAGE_DIR/$PACKAGE
         fi
 
-        COVERAGE_PERCENTAGE=$(jq '.data[0].totals.regions.percent' < coverage/$PACKAGE/coverage.json)
+        COVERAGE_PERCENTAGE=$(jq '.data[0].totals.regions.percent' < $COVERAGE_DIR/$PACKAGE/coverage.json)
 
         # Check test coverage
         if [ $(echo "$COVERAGE_PERCENTAGE < $EXPECTED_COVERAGE" | bc -l) = 1 ]; then
