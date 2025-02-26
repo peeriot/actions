@@ -104,7 +104,8 @@ exec docker run \
     --rm \
     "${EXTRA_ARGS[@]}" \
     -v "/var/run/docker.sock":"/var/run/docker.sock" \
-    -v "$GITHUB_WORKSPACE":"/github/workspace" \
-    --workdir /github/workspace \
+    -v "$GITHUB_WORKSPACE":"$GITHUB_WORKSPACE" \
+    -v "$RUNNER_TEMP":"$RUNNER_TEMP" \
+    --workdir "$GITHUB_WORKSPACE" \
     "$DOCKER_RUN_IMAGE" \
         bash -c "$SCRIPT"

@@ -1,0 +1,78 @@
+name: 'Test Network Control'
+description: Action to control a docker based test environment.
+inputs:
+  command:
+    description: |
+      Command to execute.
+
+      The following commands are available:
+        - up
+          Will bring the network up or update an existing network using the
+          provided compose file. Afterwards the policy is deployed to the
+          network.
+        - update
+          Will only update the policies using the provided policy file.
+        - down
+          Will shut down the whole network.
+    required: true
+  name:
+    description: 'Name of the deployed test network'
+    required: false
+  naming:
+    description: |
+      Controls how the name of the test network is generated.
+
+      Possible values are:
+        - postfix (default)
+          Will add a random postfix, to the provided name to reduce naming conflicts
+        - strict
+          Will use the provided name as is, to control already existing networks
+    required: false
+    default: postfix
+  config_file:
+    description: Path fo the config file to use
+    required: false
+  policy_file:
+    description: |
+      Policy to apply to the network. If none is passed this will default to value
+      provided in the `config_file` parameter.
+    required: false
+  compose_file:
+    description: |
+      Docker compose file to use for the network. If none is passed this will
+      default to the value provided in the `config_file` parameter.
+    required: false
+  orchestrator_name:
+    description: The name of the orchestrator
+    required: false
+  orchestrator_address:
+    description: The address the orchestrator is reachable at
+    required: false
+  orchestrator_port:
+    description: The port the orchestrator is reachable at
+    required: false
+    default: '50051'
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Test Net Control Docker Container
+      uses: ./.github/actions/docker-run
+      env:
+        TEST_NET_CTRL_COMMAND: ${{ inputs.command }}
+        TEST_NET_CTRL_NAME: ${{ inputs.name }}
+        TEST_NET_CTRL_NAMING: ${{ inputs.naming }}
+        TEST_NET_CTRL_CONFIG_FILE: ${{ inputs.config_file }}
+        TEST_NET_CTRL_POLICY_FILE: ${{ inputs.policy_file }}
+        TEST_NET_CTRL_COMPOSE_FILE: ${{ inputs.compose_file }}
+        TEST_NET_CTRL_ORCHESTRATOR_NAME: ${{ inputs.orchestrator_name }}
+        TEST_NET_CTRL_ORCHESTRATOR_ADDRESS: ${{ inputs.orchestrator_address }}
+        TEST_NET_CTRL_ORCHESTRATOR_PORT: ${{ inputs.orchestrator_port }}
+      with:
+        image: ghcr.io/peeriot/test-net-admin:v0.1.3
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+        user: user
+        setup_known_hosts: false
+        forward_credentials: true
+        volumes:
+        run: ./.github/actions/test-net-ctrl/exec.sh
