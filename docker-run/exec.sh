@@ -43,9 +43,8 @@ if [ ! -z "$DOCKER_RUN_USER" ] && [ "$DOCKER_RUN_USER" != "root" ]; then
 
     for GROUP in $(id -G); do
         EXTRA_ARGS+=(--group-add "$GROUP")
+        EXTRA_ARGS+=(-e HOME=/home/$DOCKER_RUN_USER)
     done
-
-    SCRIPT="$SCRIPT; export HOME=/home/$DOCKER_RUN_USER"
 fi
 
 # Forward docker credentials
