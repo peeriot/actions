@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+mkdir -p "$HOME/.ssh"
+chmod 700 "$HOME/.ssh"
+
+ssh-add -L | while read -r KEY; do
+    HASH="$(sha256sum <<< "$KEY" | awk '{print $1}')"
+
+    OWNER_AND_REPO=$(echo "$KEY" | grep -oP 'github\.com:([^\s]+)' | sed 's/github\.com://' | sed 's/.git$//')
+    if [[ -z "$OWNER_AND_REPO" ]]; then
+        echo "Key does not match the github URL pattern and is not treated as deploy key: $KEY"
+        continue
+    fi
+
+    echo "$KEY" > "$HOME/.ssh/key-${HASH}"
+
+    printf "Host key-${HASH}\n\
+        HostName        github.com\n\
+        User            git\n\
+        IdentityFile    ${HOME}/.ssh/key-${HASH}\n\
+        IdentitiesOnly  yes\n\n" >> "$HOME/.ssh/config"
+
+    git config --global --replace-all url."git@key-${HASH}:${OWNER_AND_REPO}".insteadOf "https://github.com/${OWNER_AND_REPO}"
+    git config --global --add url."git@key-${HASH}:${OWNER_AND_REPO}".insteadOf "git@github.com:${OWNER_AND_REPO}"
+    git config --global --add url."git@key-${HASH}:${OWNER_AND_REPO}".insteadOf "ssh://git@github.com/${OWNER_AND_REPO}"
+done
+
+chmod 600 "$HOME/.ssh/config" || true
