@@ -47,6 +47,9 @@ inputs:
   ssh_keys:
     description: 'List of base64 encoded keys to add to the SSH agent'
     required: false
+  token:
+    description: 'Setup an access token to access github repositories'
+    required: false
   entrypoint:
     description: 'User defined entrypoint to start the container'
     required: false
@@ -74,5 +77,6 @@ runs:
         DOCKER_RUN_VOLUMES: ${{ inputs.volumes }}
         DOCKER_RUN_SETUP_KNOWN_HOSTS: ${{ inputs.setup_known_hosts }}
         DOCKER_RUN_SSH_KEYS: ${{ inputs.ssh_keys }}
+        DOCKER_RUN_TOKEN: ${{ inputs.token }}
         DOCKER_RUN_ENTRYPOINT: ${{ inputs.entrypoint }}
         DOCKER_RUN_REMOVE_ENTRYPOINT: ${{ inputs.remove_entrypoint }}

@@ -90,6 +90,18 @@ if [ "$DOCKER_RUN_SETUP_KNOWN_HOSTS" == "true" ]; then
     SCRIPT="$SCRIPT; mkdir -p ~/.ssh; ssh-keyscan -H github.com >> ~/.ssh/known_hosts"
 fi
 
+# Setup access token
+if [ ! -z "$DOCKER_RUN_TOKEN" ]; then
+    AUTH="$(echo "$DOCKER_RUN_TOKEN" | awk '{$1=$1}1')"
+    AUTH="x-access-token:$AUTH"
+    AUTH="$(printf "$AUTH" | base64)"
+
+    SCRIPT="$SCRIPT; \
+        git config --global http.\"https://github.com\".extraheader \"Authorization: Basic $AUTH\"; \
+        git config --global --replace-all url.\"https://github.com/\".insteadOf \"ssh://git@github.com/\"; \
+        git config --global --add url.\"https://github.com/\".insteadOf \"git@github.com:\""
+fi
+
 # Parse passed keys
 if [ ! -z "$DOCKER_RUN_SSH_KEYS" ]; then
     SCRIPT="$SCRIPT; eval \"\$(ssh-agent -s)\""
