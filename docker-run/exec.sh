@@ -1,6 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-set -e
+set -euo pipefail
+
+SCRIPT_DIR="$(dirname "$0")"
 
 SCRIPT="true"
 EXTRA_ARGS=()
@@ -29,21 +31,52 @@ fi
 # Use the specified user
 if [ ! -z "$DOCKER_RUN_USER" ] && [ "$DOCKER_RUN_USER" != "root" ]; then
     USER_DIR="$RUNNER_TEMP/_home_$DOCKER_RUN_USER"
+    GROUP_FILE="$RUNNER_TEMP/_group_$DOCKER_RUN_USER"
+    PASSWD_FILE="$RUNNER_TEMP/_passwd_$DOCKER_RUN_USER"
 
-    USER_ID=$(id -u)
-    GROUP_ID=$(id -g)
+    # Get the original files from the container
+    CID="$(docker create "$DOCKER_RUN_IMAGE")"
+    docker cp "$CID:/etc/group" "$GROUP_FILE"
+    docker cp "$CID:/etc/passwd" "$PASSWD_FILE"
+    docker rm -f "$CID"
 
+    # Get UserIDs
+    USER_ID="$(id -u)"
+    GROUP_ID="$(id -g)"
+
+    # Create Home Dir
     mkdir -p "$USER_DIR"
     chown -R $USER_ID:$GROUP_ID "$USER_DIR"
 
+    # Replace the user in the passwd file
+    sed -i "/:$USER_ID:[0-9]\{1,\}:/d" "$PASSWD_FILE"
+    echo "$DOCKER_RUN_USER:x:$USER_ID:$GROUP_ID::/home/$DOCKER_RUN_USER:/bin/bash" >> "$PASSWD_FILE"
+
+    # Replace the default user group in the group file
+    sed -i "/:$GROUP_ID:$/d" "$GROUP_FILE"
+    echo "$DOCKER_RUN_USER:x:$GROUP_ID:" >> "$GROUP_FILE"
+
+    # Add arguments to docker run command
     EXTRA_ARGS+=( \
         --user $USER_ID:$GROUP_ID \
+        -e HOME=/home/$DOCKER_RUN_USER \
         -v "$USER_DIR":"/home/$DOCKER_RUN_USER" \
+        -v "$GROUP_FILE":"/etc/group" \
+        -v "$PASSWD_FILE":"/etc/passwd" \
     )
 
-    for GROUP in $(id -G); do
-        EXTRA_ARGS+=(--group-add "$GROUP")
-        EXTRA_ARGS+=(-e HOME=/home/$DOCKER_RUN_USER)
+    # Add the needed groups
+    id -Gn | tr ' ' '\n' | while read GROUP; do
+        GID=$(getent group "$GROUP" | cut -d: -f3)
+        EXTRA_ARGS+=(--group-add "$GID")
+
+        if [[ "$GID" != "$GROUP_ID" ]]; then
+            if grep -q "^$GROUP:" "$GROUP_FILE"; then
+                sed -i "/^$GROUP:/s/\$/,$DOCKER_RUN_USER/" "$GROUP_FILE"
+            else 
+                echo "$GROUP:x:$GID:$DOCKER_RUN_USER" >> "$GROUP_FILE"
+            fi
+        fi
     done
 fi
 
@@ -65,6 +98,8 @@ if [ ! -z "$DOCKER_RUN_SSH_KEYS" ]; then
             SCRIPT="$SCRIPT; echo \"$KEY\" | base64 -d | ssh-add -"
         fi
     done <<< "$DOCKER_RUN_SSH_KEYS"
+
+    SCRIPT="$SCRIPT; \"$GITHUB_WORKSPACE/.github/actions/docker-run/update-keys\""
 fi
 
 # Parse the passed volumes
