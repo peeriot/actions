@@ -8,7 +8,7 @@ SCRIPT="true"
 EXTRA_ARGS=()
 
 # Login to docker registry
-if [ ! -z "$DOCKER_RUN_USERNAME" ]; then
+if [[ -n "$DOCKER_RUN_USERNAME" ]]; then
     echo "$DOCKER_RUN_PASSWORD" | docker login "$DOCKER_RUN_REGISTRY" -u "$DOCKER_RUN_USERNAME" --password-stdin
 fi
 
@@ -17,19 +17,19 @@ docker pull "$DOCKER_RUN_IMAGE"
 DOCKER_RUN_IMAGE_ID=$(docker images "$DOCKER_RUN_IMAGE" --format '{{.ID}}')
 
 # Join the specified docker network
-if [ ! -z "$DOCKER_RUN_DOCKER_NETWORK" ]; then
+if [[ -n "$DOCKER_RUN_DOCKER_NETWORK" ]]; then
     EXTRA_ARGS+=(--network "$DOCKER_RUN_DOCKER_NETWORK")
 fi
 
 # Set the entrypoint
-if [ "$DOCKER_RUN_REMOVE_ENTRYPOINT" == "true" ]; then
+if [[ "$DOCKER_RUN_REMOVE_ENTRYPOINT" == "true" ]]; then
     EXTRA_ARGS+=(--entrypoint "")
-elif [ ! -z "$DOCKER_RUN_ENTRYPOINT" ]; then
+elif [[ -n "$DOCKER_RUN_ENTRYPOINT" ]]; then
     EXTRA_ARGS+=(--entrypoint "$DOCKER_RUN_ENTRYPOINT")
 fi
 
 # Use the specified user
-if [ ! -z "$DOCKER_RUN_USER" ] && [ "$DOCKER_RUN_USER" != "root" ]; then
+if [[ -n "$DOCKER_RUN_USER" ]] && [[ "$DOCKER_RUN_USER" != "root" ]]; then
     USER_DIR="$RUNNER_TEMP/_home_$DOCKER_RUN_USER"
     GROUP_FILE="$RUNNER_TEMP/_group_$DOCKER_RUN_USER"
     PASSWD_FILE="$RUNNER_TEMP/_passwd_$DOCKER_RUN_USER"
@@ -81,17 +81,17 @@ if [ ! -z "$DOCKER_RUN_USER" ] && [ "$DOCKER_RUN_USER" != "root" ]; then
 fi
 
 # Forward docker credentials
-if [ "$DOCKER_RUN_FORWARD_CREDENTIALS" == "true" ]; then
+if [[ "$DOCKER_RUN_FORWARD_CREDENTIALS" == "true" ]]; then
     SCRIPT="$SCRIPT; echo \"$DOCKER_RUN_PASSWORD\" | docker login \"$DOCKER_RUN_REGISTRY\" -u \"$DOCKER_RUN_USERNAME\" --password-stdin"
 fi
 
 # Setup known hosts
-if [ "$DOCKER_RUN_SETUP_KNOWN_HOSTS" == "true" ]; then
+if [[ "$DOCKER_RUN_SETUP_KNOWN_HOSTS" == "true" ]]; then
     SCRIPT="$SCRIPT; mkdir -p ~/.ssh; ssh-keyscan -H github.com >> ~/.ssh/known_hosts"
 fi
 
 # Setup access token
-if [ ! -z "$DOCKER_RUN_TOKEN" ]; then
+if [[ -n "$DOCKER_RUN_TOKEN" ]]; then
     AUTH="$(echo "$DOCKER_RUN_TOKEN" | awk '{$1=$1}1')"
     AUTH="x-access-token:$AUTH"
     AUTH="$(printf "$AUTH" | base64)"
@@ -103,7 +103,7 @@ if [ ! -z "$DOCKER_RUN_TOKEN" ]; then
 fi
 
 # Parse passed keys
-if [ ! -z "$DOCKER_RUN_SSH_KEYS" ]; then
+if [[ -n "$DOCKER_RUN_SSH_KEYS" ]]; then
     SCRIPT="$SCRIPT; eval \"\$(ssh-agent -s)\""
     while IFS= read -r KEY; do
         if [ ! -z "$KEY" ]; then
@@ -142,7 +142,7 @@ for ENV in $(export -p | cut -d' ' -f3 | cut -d'=' -f1 | grep -vE '^(OLDPWD|PATH
 done
 
 # Bring up the container and execute the requested command
-if [ ! -z "$DOCKER_RUN_RUN" ]; then
+if [[ -n "$DOCKER_RUN_RUN" ]]; then
     SCRIPT="$SCRIPT; $DOCKER_RUN_RUN"
 fi
 
