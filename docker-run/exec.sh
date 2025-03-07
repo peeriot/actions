@@ -66,7 +66,7 @@ if [[ -n "$DOCKER_RUN_USER" ]] && [[ "$DOCKER_RUN_USER" != "root" ]]; then
     )
 
     # Add the needed groups
-    id -Gn | tr ' ' '\n' | while read GROUP; do
+    for GROUP in $(id -Gn); do
         GID=$(getent group "$GROUP" | cut -d: -f3)
         EXTRA_ARGS+=(--group-add "$GID")
 
@@ -137,7 +137,7 @@ while IFS= read -r VOLUME; do
 done <<< "$DOCKER_RUN_VOLUMES"
 
 # Set environment variables
-for ENV in $(export -p | cut -d' ' -f3 | cut -d'=' -f1 | grep -vE '^(OLDPWD|PATH|PWD|SHL|HOME|HOSTNAME|INPUT_.*|DOCKER_RUN_.*)$'); do
+for ENV in $(export -p | cut -d ' ' -f3 | cut -d '=' -f1 | grep -vE '^(OLDPWD|PATH|PWD|SHL|HOME|HOSTNAME|INPUT_.*|DOCKER_RUN_.*)$'); do
     EXTRA_ARGS+=(-e "$ENV")
 done
 
