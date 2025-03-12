@@ -17,6 +17,9 @@ RUN_CARGO_TEST=${RUN_CARGO_TEST:-true}
 # Globally enable or disable cargo test execution with code coverage
 RUN_CARGO_TEST_WITH_COVERAGE=${RUN_CARGO_TEST_WITH_COVERAGE:-true}
 
+# Prebuild the whole workspace before tests are ran.
+PREBUILD_WORKSPACE_BEFORE_TEST=${PREBUILD_WORKSPACE_BEFORE_TEST:-false}
+
 # Globally include doc tests in the coverage results
 INCLUDE_DOC_TESTS=${INCLUDE_DOC_TESTS:-false}
 
@@ -105,6 +108,12 @@ if [ "$RUN_CARGO_DOC" = "true" ]; then
             $CARGO_EXTRA_ARGS \
             --document-private-items
     done
+fi
+
+if [ "$PREBUILD_WORKSPACE_BEFORE_TEST" = "true" ]; then
+  printf "\n\n--== Prebuilding workspace ==--\n\n"
+
+  cargo build --all-targets --workspace
 fi
 
 # Run cargo test
