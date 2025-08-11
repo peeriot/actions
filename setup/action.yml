@@ -1,0 +1,56 @@
+name: 'Setup'
+description: 'Common setup used to checkout the code, and create an App Token'
+
+inputs:
+  app-id:
+    description: 'GitHub App Id'
+    required: true
+  access-private-key:
+    description: 'GitHub App private key'
+    required: true
+  ssh-private-key:
+    description: 'Whether to add the peeriot ssh keys'
+    required: false
+    default: ''
+  cleanup:
+    description: 'Whether to run the cleanup step'
+    required: false
+    default: 'true'
+
+outputs:
+  token:
+    description: 'GitHub App Token'
+    value: ${{ steps.app-token.outputs.token }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Create Access Token
+      uses: actions/create-github-app-token@v1
+      id: app-token
+      with:
+        owner: ${{ github.repository_owner }}
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.access-private-key }}
+
+    - name: Setup SSH Keys
+      if: inputs.ssh-private-key != ''
+      uses: peeriot/actions-ssh-agent@8b50017ceb9e1a92b4a9e57e558dd4c1683a3f8d
+      with:
+        ssh-private-key: |
+          ${{ inputs.ssh-private-key }}
+
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        clean: false
+        submodules: false
+        persist-credentials: false
+        token: ${{ steps.app-token.outputs.token }}
+
+    - name: Cleanup
+      if: inputs.cleanup == 'true'
+      shell: bash
+      run: |
+        git clean -ffdx -e target/
+        git reset --hard HEAD
