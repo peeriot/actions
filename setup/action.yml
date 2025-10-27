@@ -16,6 +16,10 @@ inputs:
     description: 'Whether to run the cleanup step'
     required: false
     default: 'true'
+  submodules:
+    description: 'Whether to handle git submodules checkout'
+    required: false
+    default: 'false'
 
 outputs:
   token:
@@ -44,7 +48,7 @@ runs:
       uses: actions/checkout@v4
       with:
         clean: false
-        submodules: false
+        submodules: ${{ inputs.submodules }}
         persist-credentials: false
         token: ${{ steps.app-token.outputs.token }}
 
