@@ -38,4 +38,4 @@ runs:
         user: user
         setup_known_hosts: false
         remove_entrypoint: true
-        run: ./minio-client/exec.sh
+        entrypoint: ./minio-client/exec.sh
