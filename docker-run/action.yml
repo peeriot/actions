@@ -40,6 +40,9 @@ inputs:
   volumes:
     description: 'Volumes that should be used for the container'
     required: false
+  lockfiles:
+    description: 'Lockfiles that should be considered for generating a cache key'
+    required: false
   setup_known_hosts:
     description: 'Add gitlab.com to the list of known hosts'
     required: false
@@ -75,6 +78,7 @@ runs:
         DOCKER_RUN_FORWARD_CREDENTIALS: ${{ inputs.forward_credentials }}
         DOCKER_RUN_DOCKER_NETWORK: ${{ inputs.docker_network }}
         DOCKER_RUN_VOLUMES: ${{ inputs.volumes }}
+        DOCKER_RUN_LOCKFILES: ${{ inputs.lockfiles }}
         DOCKER_RUN_SETUP_KNOWN_HOSTS: ${{ inputs.setup_known_hosts }}
         DOCKER_RUN_SSH_KEYS: ${{ inputs.ssh_keys }}
         DOCKER_RUN_TOKEN: ${{ inputs.token }}
