@@ -73,7 +73,7 @@ if [[ -n "$DOCKER_RUN_USER" ]] && [[ "$DOCKER_RUN_USER" != "root" ]]; then
         if [[ "$GID" != "$GROUP_ID" ]]; then
             if grep -q "^$GROUP:" "$GROUP_FILE"; then
                 sed -i "/^$GROUP:/s/\$/,$DOCKER_RUN_USER/" "$GROUP_FILE"
-            else 
+            else
                 echo "$GROUP:x:$GID:$DOCKER_RUN_USER" >> "$GROUP_FILE"
             fi
         fi
@@ -114,6 +114,30 @@ if [[ -n "$DOCKER_RUN_SSH_KEYS" ]]; then
     SCRIPT="$SCRIPT; \"$GITHUB_WORKSPACE/.github/actions/docker-run/update-keys\""
 fi
 
+# Parse the passed lockfiles
+LOCKFILE_HASH=""
+if [[ -n "$DOCKER_RUN_LOCKFILES" ]]; then
+    LOCKFILE_ARRAY=()
+    while IFS= read -r LOCKFILE; do
+        # Check $LOCKFILE not empty line:
+        if [ -z "$LOCKFILE" ]; then
+            continue
+        fi
+
+        # Ensure $LOCKFILE is an existing file
+        if [ ! -r "$LOCKFILE" ]; then
+            echo "Lockfile '$LOCKFILE' does not exist or is not readable."
+            exit 1
+        fi
+
+        LOCKFILE_ARRAY+=("$LOCKFILE")
+    done <<< "$DOCKER_RUN_LOCKFILES"
+
+    if ((${#LOCKFILE_ARRAY[@]} > 0)); then
+        LOCKFILE_HASH=$(cat "${LOCKFILE_ARRAY[@]}" | sha256sum | cut -b1-16)
+    fi
+fi
+
 # Parse the passed volumes
 while IFS= read -r VOLUME; do
     IFS=":" read -ra PARTS <<< "$VOLUME"
@@ -122,7 +146,12 @@ while IFS= read -r VOLUME; do
         continue;
     fi
 
-    VOLUME_NAME="$HOSTNAME-$DOCKER_RUN_IMAGE_ID-${PARTS[0]}"
+    PREFIX="$HOSTNAME-$DOCKER_RUN_IMAGE_ID"
+    if [[ -n "$LOCKFILE_HASH" ]]; then
+        PREFIX="$LOCKFILE_HASH"
+    fi
+
+    VOLUME_NAME="$PREFIX-${PARTS[0]}"
     VOLUME_PATH="${PARTS[1]}"
 
     if ! docker volume ls --format '{{.Name}}' | grep -q "^${VOLUME_NAME}$"; then
@@ -134,6 +163,7 @@ while IFS= read -r VOLUME; do
     fi
 
     EXTRA_ARGS+=(-v "$VOLUME_NAME":"$VOLUME_PATH")
+    SCRIPT="$SCRIPT; date +%s > \"$VOLUME_PATH/volume_last_used\""
 done <<< "$DOCKER_RUN_VOLUMES"
 
 # Set environment variables
