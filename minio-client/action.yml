@@ -23,7 +23,7 @@ runs:
   using: 'composite'
   steps:
     - name: Run MinIo Docker Container
-      uses: peeriot/actions/docker-run@7877bfbb5dd22ed0d88c1566792b2c9ca07aab08
+      uses: peeriot/actions/docker-run@639fa3cf5adeac8951e51dfc5cabaf749f7e0c72
       env:
         MINIO_HOST: ${{ inputs.host }}
         MINIO_ACCESS_KEY: ${{ inputs.access_key }}
