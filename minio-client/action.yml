@@ -23,7 +23,7 @@ runs:
   using: 'composite'
   steps:
     - name: Run MinIo Docker Container
-      uses: peeriot/actions/docker-run@84633cb2c0842d001bb7bcbebfe05d985a6fd8e5
+      uses: peeriot/actions/docker-run@312df24b263e999f10907603133824229dc01af2
       env:
         MINIO_HOST: ${{ inputs.host }}
         MINIO_ACCESS_KEY: ${{ inputs.access_key }}
@@ -37,5 +37,4 @@ runs:
         password: ${{ github.token }}
         user: user
         setup_known_hosts: false
-        remove_entrypoint: true
-        entrypoint: ./minio-client/exec.sh
+        entrypoint: ${{ github.action_path }}/exec.sh
