@@ -156,3 +156,5 @@ exec docker run \
     --workdir "$GITHUB_WORKSPACE" \
     "$DOCKER_RUN_IMAGE" \
         bash -c "$SCRIPT"
+
+echo "skip=true" >> $GITHUB_OUTPUT
