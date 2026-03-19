@@ -152,6 +152,7 @@ exec docker run \
     -v "/var/run/docker.sock":"/var/run/docker.sock" \
     -v "$GITHUB_WORKSPACE":"$GITHUB_WORKSPACE" \
     -v "$RUNNER_TEMP":"$RUNNER_TEMP" \
+    -v "$GITHUB_OUTPUT":"$GITHUB_OUTPUT" \
     --workdir "$GITHUB_WORKSPACE" \
     "$DOCKER_RUN_IMAGE" \
         bash -c "$SCRIPT"
