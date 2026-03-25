@@ -114,56 +114,94 @@ if [[ -n "$DOCKER_RUN_SSH_KEYS" ]]; then
     SCRIPT="$SCRIPT; \"$GITHUB_WORKSPACE/.github/actions/docker-run/update-keys\""
 fi
 
-# Parse the passed lockfiles
-LOCKFILE_HASH=""
-if [[ -n "$DOCKER_RUN_LOCKFILES" ]]; then
-    LOCKFILE_ARRAY=()
-    while IFS= read -r LOCKFILE; do
-        # Check $LOCKFILE not empty line:
-        if [ -z "$LOCKFILE" ]; then
-            continue
+# Helper function to compute hash from files and directories
+compute_hash_from_paths() {
+    local paths="$1"
+
+    # Pipe all content to sha256sum
+    while IFS= read -r path; do
+        [[ -z "$path" ]] && continue
+
+        if [ -d "$path" ]; then
+            find "$path" -type f -exec cat {} \;
+        else
+            cat "$path"
         fi
-
-        # Ensure $LOCKFILE is an existing file
-        if [ ! -r "$LOCKFILE" ]; then
-            echo "Lockfile '$LOCKFILE' does not exist or is not readable."
-            exit 1
-        fi
-
-        LOCKFILE_ARRAY+=("$LOCKFILE")
-    done <<< "$DOCKER_RUN_LOCKFILES"
-
-    if ((${#LOCKFILE_ARRAY[@]} > 0)); then
-        LOCKFILE_HASH=$(cat "${LOCKFILE_ARRAY[@]}" | sha256sum | cut -b1-16)
-    fi
-fi
+    done <<< "$paths" | sha256sum | cut -b1-16
+}
 
 # Parse the passed volumes
 while IFS= read -r VOLUME; do
-    IFS=":" read -ra PARTS <<< "$VOLUME"
+    # Skip empty lines
+    [[ -z "$VOLUME" ]] && continue
 
-    if [ "${#PARTS[@]}" != "2" ]; then
-        continue;
+    # Extract volume name and rest (container-path,options)
+    IFS=":" read -r VOLUME_BASE_NAME REST <<< "$VOLUME"
+
+    # Extract container path and options from REST
+    # REST format: container-path,option1,option2=value
+    IFS="," read -ra REST_PARTS <<< "$REST"
+    VOLUME_CONTAINER_PATH="${REST_PARTS[0]}"
+
+    if [[ -z "$VOLUME_BASE_NAME" ]] || [[ -z "$VOLUME_CONTAINER_PATH" ]]; then
+        continue
     fi
 
-    PREFIX="$HOSTNAME-$DOCKER_RUN_IMAGE_ID"
-    if [[ -n "$LOCKFILE_HASH" ]]; then
-        PREFIX="$LOCKFILE_HASH"
+    # Parse options (starting from index 1)
+    MOUNT_MODE="rw"  # default
+    USE_EXTERNAL="false"
+    VOLUME_LOCKFILES=""
+
+    for ((i = 1; i < ${#REST_PARTS[@]}; i++)); do
+        OPTION="${REST_PARTS[$i]}"
+
+        if [[ "$OPTION" == "ro" ]]; then
+            MOUNT_MODE="ro"
+        elif [[ "$OPTION" == "rw" ]]; then
+            MOUNT_MODE="rw"
+        elif [[ "$OPTION" == "external" ]]; then
+            USE_EXTERNAL="true"
+        elif [[ "$OPTION" =~ ^lockfiles= ]]; then
+            VOLUME_LOCKFILES="${OPTION#lockfiles=}"
+        fi
+    done
+
+    # Generate volume name
+    if [[ "$USE_EXTERNAL" == "true" ]]; then
+        VOLUME_NAME="$VOLUME_BASE_NAME"
+    else
+        # Determine postfix: either custom hash from volume lockfiles or image ID
+        POSTFIX="$DOCKER_RUN_IMAGE_ID"
+
+        if [[ -n "$VOLUME_LOCKFILES" ]]; then
+            # Custom lockfiles for this volume
+            POSTFIX=$(compute_hash_from_paths "$VOLUME_LOCKFILES")
+        fi
+
+        # Format: hostname-volumename-postfix
+        VOLUME_NAME="$HOSTNAME-$VOLUME_BASE_NAME-$POSTFIX"
     fi
 
-    VOLUME_NAME="$PREFIX-${PARTS[0]}"
-    VOLUME_PATH="${PARTS[1]}"
-
+    # Create volume if needed
     if ! docker volume ls --format '{{.Name}}' | grep -q "^${VOLUME_NAME}$"; then
         echo "Create docker volume: $VOLUME_NAME"
 
         docker volume create "$VOLUME_NAME"
+
+        docker run --rm \
+            -u 0 \
+            -v $VOLUME_NAME:/data \
+            alpine \
+            sh -c 'chmod 777 /data'
     else
         echo "Reuse existing docker volume: $VOLUME_NAME"
     fi
 
-    EXTRA_ARGS+=(-v "$VOLUME_NAME":"$VOLUME_PATH")
-    SCRIPT="$SCRIPT; date +%s > \"$VOLUME_PATH/volume_last_used\""
+    # Mount volume with mode
+    EXTRA_ARGS+=(-v "$VOLUME_NAME":"$VOLUME_CONTAINER_PATH":"$MOUNT_MODE")
+    if [[ "$MOUNT_MODE" != "ro" ]]; then
+        SCRIPT="$SCRIPT; date +%s > \"$VOLUME_CONTAINER_PATH/volume_last_used\""
+    fi
 done <<< "$DOCKER_RUN_VOLUMES"
 
 # Set environment variables
@@ -175,6 +213,8 @@ done
 if [[ -n "$DOCKER_RUN_RUN" ]]; then
     SCRIPT="$SCRIPT; $DOCKER_RUN_RUN"
 fi
+
+set -x
 
 exec docker run \
     --rm \
