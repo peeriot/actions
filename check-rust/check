@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+
+set -xeuo pipefail
+
+export SCRIPT_DIR="$(dirname "$0")"
+export PROJECT_ROOT="$(readlink -f "$SCRIPT_DIR/../..")"
+export COVERAGE_DIR="$PROJECT_ROOT/target/coverage"
+export CARGO_EXTRA_ARGS=""
+
+# Additional arguments to pass to every call of `cargo`
+CARGO_EXTRA_ARGS=${CARGO_EXTRA_ARGS:-}
+
+# Directory to store the coverage reports in
+ONLY_TEST_PACKAGES=${ONLY_TEST_PACKAGES:-}
+
+CHECK_DIRECTORY=${CHECK_DIRECTORY:-.}
+
+PROJECT_ROOT="${PROJECT_ROOT:?"PROJECT_ROOT is unset!"}"
+
+OLD_PWD="$PWD"
+
+finish() {
+    cd "$OLD_PWD"
+}
+
+trap finish EXIT
+
+cd "$CHECK_DIRECTORY"
+
+printf "\n\n--== Directory $CHECK_DIRECTORY ==--\n\n"
+ls
+
+printf "\n\n--== Build Environment ==--\n\n"
+rustc \
+    --version
+cargo \
+    --version
+
+# Run build
+printf "\n\n--== Run Build ==--\n\n"
+cargo build --all-targets
+
+# Run cargo fmt
+printf "\n\n--== Check Code Formatting ==--\n\n"
+cargo fmt \
+    --all \
+    -- \
+        --check
+
+# Run cargo clippy
+printf "\n\n--== Run Linter ==--\n\n"
+cargo clippy \
+    --all-targets \
+    $CARGO_EXTRA_ARGS \
+    -- \
+        --deny "warnings"
+
+
+# Run cargo doc
+printf "\n\n--== Check Doc ==--\n\n"
+
+RUSTDOCFLAGS="-D warnings" \
+cargo doc \
+    --no-deps \
+    $CARGO_EXTRA_ARGS \
+    --document-private-items
+
+# Run cargo nextest
+PACKAGE_ARGS=()
+if [ -n "$ONLY_TEST_PACKAGES" ]; then
+    for PACKAGE in $ONLY_TEST_PACKAGES; do
+        PACKAGE_ARGS+=('-p' "$PACKAGE")
+    done
+fi
+
+printf "\n\n--== Run Unit Tests ==--\n\n"
+RUSTFLAGS="-D warnings" \
+    cargo nextest run \
+    $CARGO_EXTRA_ARGS \
+    --no-fail-fast \
+    "${PACKAGE_ARGS[@]}"
