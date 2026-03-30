@@ -142,7 +142,7 @@ for ARGS in $PACKAGES; do
                     '.packages[] | select(.name != $pkg) | .manifest_path | sub("/Cargo.toml$"; "")' \
                 | paste -sd "|" \
             )
-            
+
             cargo llvm-cov \
                 nextest \
                 -p "$PACKAGE" \
