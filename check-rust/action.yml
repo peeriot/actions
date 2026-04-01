@@ -15,6 +15,9 @@ inputs:
   command_suffix:
     description: 'A suffix to append to all commands.'
     default: ''
+  nightly:
+    description: 'Use nightly builds of rust.'
+    default: false
 
 runs:
   using: "composite"
@@ -26,6 +29,7 @@ runs:
         ONLY_TEST_PACKAGES: ${{ inputs.only_test_packages }}
         CHECK_DIRECTORY: ${{ inputs.directory }}
         COMMAND_SUFFIX: ${{ inputs.command_suffix }}
+        USE_NIGHTLY: ${{ inputs.nightly }}
       with:
         image: ${{ inputs.image }}
         username: ${{ github.actor }}
