@@ -38,7 +38,7 @@ cargo \
 
 # Run build
 printf "\n\n--== Run Build ==--\n\n"
-cargo build --all-targets
+cargo build"$COMMAND_SUFFIX" --all-targets
 
 # Run cargo fmt
 printf "\n\n--== Check Code Formatting ==--\n\n"
@@ -49,7 +49,7 @@ cargo fmt \
 
 # Run cargo clippy
 printf "\n\n--== Run Linter ==--\n\n"
-cargo clippy \
+cargo clippy"$COMMAND_SUFFIX" \
     --all-targets \
     $CARGO_EXTRA_ARGS \
     -- \
@@ -60,7 +60,7 @@ cargo clippy \
 printf "\n\n--== Check Doc ==--\n\n"
 
 RUSTDOCFLAGS="-D warnings" \
-cargo doc \
+cargo doc"$COMMAND_SUFFIX" \
     --no-deps \
     $CARGO_EXTRA_ARGS \
     --document-private-items
@@ -75,7 +75,7 @@ fi
 
 printf "\n\n--== Run Unit Tests ==--\n\n"
 RUSTFLAGS="-D warnings" \
-    cargo nextest run \
+    cargo nextest"$COMMAND_SUFFIX" run \
     $CARGO_EXTRA_ARGS \
     --no-fail-fast \
     "${PACKAGE_ARGS[@]}"
