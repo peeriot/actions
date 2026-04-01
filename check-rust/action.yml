@@ -12,6 +12,9 @@ inputs:
   directory:
     description: 'The cargo workspace directory relative to the project directory. If empty, the project directory is used.'
     default: '.'
+  command_suffix:
+    description: 'A suffix to append to all commands.'
+    default: ''
 
 runs:
   using: "composite"
@@ -22,6 +25,7 @@ runs:
         CARGO_NET_GIT_FETCH_WITH_CLI: true
         ONLY_TEST_PACKAGES: ${{ inputs.only_test_packages }}
         CHECK_DIRECTORY: ${{ inputs.directory }}
+        COMMAND_SUFFIX: ${{ inputs.command_suffix }}
       with:
         image: ${{ inputs.image }}
         username: ${{ github.actor }}
