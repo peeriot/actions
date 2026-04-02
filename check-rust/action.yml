@@ -18,6 +18,10 @@ inputs:
   nightly:
     description: 'Use nightly builds of rust.'
     default: false
+  all_targets:
+    description: 'Build all targets.'
+    default: true
+
 
 runs:
   using: "composite"
@@ -30,6 +34,7 @@ runs:
         CHECK_DIRECTORY: ${{ inputs.directory }}
         COMMAND_SUFFIX: ${{ inputs.command_suffix }}
         USE_NIGHTLY: ${{ inputs.nightly }}
+        ALL_TARGETS: ${{ inputs.all_targets }}
       with:
         image: ${{ inputs.image }}
         username: ${{ github.actor }}

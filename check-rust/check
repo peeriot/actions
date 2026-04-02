@@ -24,6 +24,11 @@ if [[ "$USE_NIGHTLY" == "true" ]]; then
     CARGO_NIGHTLY="+nightly"
 fi
 
+ALL_TARGETS_FLAG=""
+if [[ "$ALL_TARGETS" == "true" ]]; then
+    ALL_TARGETS_FLAG="--all-targets"
+fi
+
 finish() {
     cd "$OLD_PWD"
 }
@@ -43,7 +48,7 @@ cargo \
 
 # Run build
 printf "\n\n--== Run Build ==--\n\n"
-cargo ${CARGO_NIGHTLY:+$CARGO_NIGHTLY} build"$COMMAND_SUFFIX" --all-targets
+cargo ${CARGO_NIGHTLY:+$CARGO_NIGHTLY} build"$COMMAND_SUFFIX" ${ALL_TARGETS_FLAG:+$ALL_TARGETS_FLAG}
 
 # Run cargo fmt
 printf "\n\n--== Check Code Formatting ==--\n\n"
@@ -55,7 +60,7 @@ cargo fmt \
 # Run cargo clippy
 printf "\n\n--== Run Linter ==--\n\n"
 cargo ${CARGO_NIGHTLY:+$CARGO_NIGHTLY} clippy"$COMMAND_SUFFIX" \
-    --all-targets \
+    ${ALL_TARGETS_FLAG:+$ALL_TARGETS_FLAG} \
     $CARGO_EXTRA_ARGS \
     -- \
         --deny "warnings"
