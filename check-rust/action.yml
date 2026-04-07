@@ -15,9 +15,8 @@ inputs:
   command_suffix:
     description: 'A suffix to append to all commands.'
     default: ''
-  nightly:
-    description: 'Use nightly builds of rust.'
-    default: false
+  channel:
+    description: 'Use explicit channel (e.g. stable, 1.92.0, nightly, nightly-2026-04-01).'
   all_targets:
     description: 'Build all targets.'
     default: true
@@ -33,7 +32,7 @@ runs:
         ONLY_TEST_PACKAGES: ${{ inputs.only_test_packages }}
         CHECK_DIRECTORY: ${{ inputs.directory }}
         COMMAND_SUFFIX: ${{ inputs.command_suffix }}
-        USE_NIGHTLY: ${{ inputs.nightly }}
+        CARGO_CHANNEL: ${{ inputs.channel }}
         ALL_TARGETS: ${{ inputs.all_targets }}
       with:
         image: ${{ inputs.image }}
@@ -44,6 +43,6 @@ runs:
         volumes: |
           cache-cargo:/usr/local/cargo
           cache-rustup:/usr/local/rustup
-          target:${{ env.GITHUB_WORKSPACE }}/${{ inputs.directory }}/target,lockfiles=${{ inputs.directory }}/Cargo.lock
+          target:${{ github.workspace }}/${{ inputs.directory }}/target,lockfiles=${{ inputs.directory }}/Cargo.lock
         run: |
           ${{ github.action_path }}/check
