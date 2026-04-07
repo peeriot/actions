@@ -3,31 +3,20 @@
 set -xeuo pipefail
 
 export SCRIPT_DIR="$(dirname "$0")"
-export PROJECT_ROOT="$(readlink -f "$SCRIPT_DIR/../..")"
-export COVERAGE_DIR="$PROJECT_ROOT/target/coverage"
-export CARGO_EXTRA_ARGS=""
-
-# Additional arguments to pass to every call of `cargo`
-CARGO_EXTRA_ARGS=${CARGO_EXTRA_ARGS:-}
 
 # Directory to store the coverage reports in
 ONLY_TEST_PACKAGES=${ONLY_TEST_PACKAGES:-}
 
 CHECK_DIRECTORY=${CHECK_DIRECTORY:-.}
 
-PROJECT_ROOT="${PROJECT_ROOT:?"PROJECT_ROOT is unset!"}"
-
-OLD_PWD="$PWD"
-
-CARGO_NIGHTLY=""
-if [[ "$USE_NIGHTLY" == "true" ]]; then
-    CARGO_NIGHTLY="+nightly"
-fi
+CARGO_CHANNEL=${CARGO_CHANNEL:-}
 
 ALL_TARGETS_FLAG=""
 if [[ "$ALL_TARGETS" == "true" ]]; then
     ALL_TARGETS_FLAG="--all-targets"
 fi
+
+OLD_PWD="$PWD"
 
 finish() {
     cd "$OLD_PWD"
@@ -46,22 +35,23 @@ rustc \
 cargo \
     --version
 
-# Run build
+# Run check
 printf "\n\n--== Run Build ==--\n\n"
-cargo ${CARGO_NIGHTLY:+$CARGO_NIGHTLY} build"$COMMAND_SUFFIX" ${ALL_TARGETS_FLAG:+$ALL_TARGETS_FLAG}
+cargo ${CARGO_CHANNEL:++$CARGO_CHANNEL} \
+    check"$COMMAND_SUFFIX" \
+    ${ALL_TARGETS_FLAG:+$ALL_TARGETS_FLAG}
 
 # Run cargo fmt
 printf "\n\n--== Check Code Formatting ==--\n\n"
-cargo fmt \
-    --all \
+cargo fmt --all \
     -- \
         --check
 
 # Run cargo clippy
 printf "\n\n--== Run Linter ==--\n\n"
-cargo ${CARGO_NIGHTLY:+$CARGO_NIGHTLY} clippy"$COMMAND_SUFFIX" \
+cargo ${CARGO_CHANNEL:++$CARGO_CHANNEL} \
+    clippy"$COMMAND_SUFFIX" \
     ${ALL_TARGETS_FLAG:+$ALL_TARGETS_FLAG} \
-    $CARGO_EXTRA_ARGS \
     -- \
         --deny "warnings"
 
@@ -70,9 +60,9 @@ cargo ${CARGO_NIGHTLY:+$CARGO_NIGHTLY} clippy"$COMMAND_SUFFIX" \
 printf "\n\n--== Check Doc ==--\n\n"
 
 RUSTDOCFLAGS="-D warnings" \
-cargo ${CARGO_NIGHTLY:+$CARGO_NIGHTLY} doc"$COMMAND_SUFFIX" \
+cargo ${CARGO_CHANNEL:++$CARGO_CHANNEL} \
+    doc"$COMMAND_SUFFIX" \
     --no-deps \
-    $CARGO_EXTRA_ARGS \
     --document-private-items
 
 # Run cargo nextest
@@ -85,7 +75,6 @@ fi
 
 printf "\n\n--== Run Unit Tests ==--\n\n"
 RUSTFLAGS="-D warnings" \
-    cargo ${CARGO_NIGHTLY:+$CARGO_NIGHTLY} nextest"$COMMAND_SUFFIX" run \
-    $CARGO_EXTRA_ARGS \
+    cargo ${CARGO_CHANNEL:++$CARGO_CHANNEL} nextest"$COMMAND_SUFFIX" \
     --no-fail-fast \
     "${PACKAGE_ARGS[@]}"
