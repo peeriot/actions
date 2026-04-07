@@ -7,6 +7,9 @@ inputs:
     required: true
   only_test_packages:
     description: 'List of packages to test. If empty, the whole workspace is tested.'
+  skip_tests:
+    description: 'Do not run tests.'
+    default: false
   image:
     description: 'The docker image to run the tests in. Needs all rust dependencies installed already.'
   directory:
@@ -34,6 +37,7 @@ runs:
         COMMAND_SUFFIX: ${{ inputs.command_suffix }}
         CARGO_CHANNEL: ${{ inputs.channel }}
         ALL_TARGETS: ${{ inputs.all_targets }}
+        SKIP_TESTS: ${{ inputs.skip_tests }}
       with:
         image: ${{ inputs.image }}
         username: ${{ github.actor }}
