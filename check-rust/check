@@ -4,12 +4,10 @@ set -xeuo pipefail
 
 export SCRIPT_DIR="$(dirname "$0")"
 
-# Directory to store the coverage reports in
 ONLY_TEST_PACKAGES=${ONLY_TEST_PACKAGES:-}
-
-CHECK_DIRECTORY=${CHECK_DIRECTORY:-.}
-
+SKIP_TESTS=${SKIP_TESTS:-}
 CARGO_CHANNEL=${CARGO_CHANNEL:-}
+CHECK_DIRECTORY=${CHECK_DIRECTORY:-.}
 
 ALL_TARGETS_FLAG=""
 if [[ "$ALL_TARGETS" == "true" ]]; then
@@ -65,16 +63,19 @@ cargo ${CARGO_CHANNEL:++$CARGO_CHANNEL} \
     --no-deps \
     --document-private-items
 
-# Run cargo nextest
-PACKAGE_ARGS=()
-if [ -n "$ONLY_TEST_PACKAGES" ]; then
-    for PACKAGE in $ONLY_TEST_PACKAGES; do
-        PACKAGE_ARGS+=('-p' "$PACKAGE")
-    done
-fi
 
-printf "\n\n--== Run Unit Tests ==--\n\n"
-RUSTFLAGS="-D warnings" \
-    cargo ${CARGO_CHANNEL:++$CARGO_CHANNEL} citest"$COMMAND_SUFFIX" \
-    --no-fail-fast \
-    "${PACKAGE_ARGS[@]}"
+# Run cargo test / nextest
+if [[ "$SKIP_TESTS" != "true" ]]; then
+    PACKAGE_ARGS=()
+    if [ -n "$ONLY_TEST_PACKAGES" ]; then
+        for PACKAGE in $ONLY_TEST_PACKAGES; do
+            PACKAGE_ARGS+=('-p' "$PACKAGE")
+        done
+    fi
+
+    printf "\n\n--== Run Unit Tests ==--\n\n"
+    RUSTFLAGS="-D warnings" \
+        cargo ${CARGO_CHANNEL:++$CARGO_CHANNEL} citest"$COMMAND_SUFFIX" \
+        --no-fail-fast \
+        "${PACKAGE_ARGS[@]}"
+fi
