@@ -75,6 +75,6 @@ fi
 
 printf "\n\n--== Run Unit Tests ==--\n\n"
 RUSTFLAGS="-D warnings" \
-    cargo ${CARGO_CHANNEL:++$CARGO_CHANNEL} nextest"$COMMAND_SUFFIX" \
+    cargo ${CARGO_CHANNEL:++$CARGO_CHANNEL} citest"$COMMAND_SUFFIX" \
     --no-fail-fast \
     "${PACKAGE_ARGS[@]}"
