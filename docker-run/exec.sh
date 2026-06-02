@@ -151,6 +151,10 @@ while IFS= read -r VOLUME; do
     MOUNT_MODE="rw"  # default
     USE_EXTERNAL="false"
     VOLUME_LOCKFILES=""
+    USE_ABSOLUTE_PATH="false"
+    if [[ "$VOLUME_BASE_NAME" == *\/* ]]; then
+        USE_ABSOLUTE_PATH="true"
+    fi
 
     for ((i = 1; i < ${#REST_PARTS[@]}; i++)); do
         OPTION="${REST_PARTS[$i]}"
@@ -167,7 +171,7 @@ while IFS= read -r VOLUME; do
     done
 
     # Generate volume name
-    if [[ "$USE_EXTERNAL" == "true" ]]; then
+    if [[ "$USE_EXTERNAL" == "true" ]] || [[ "$USE_ABSOLUTE_PATH" == "true" ]]; then
         VOLUME_NAME="$VOLUME_BASE_NAME"
     else
         # Determine postfix: either custom hash from volume lockfiles or image ID
@@ -182,19 +186,21 @@ while IFS= read -r VOLUME; do
         VOLUME_NAME="$HOSTNAME-$VOLUME_BASE_NAME-$POSTFIX"
     fi
 
-    # Create volume if needed
-    if ! docker volume ls --format '{{.Name}}' | grep -q "^${VOLUME_NAME}$"; then
-        echo "Create docker volume: $VOLUME_NAME"
+    if [[ "$USE_ABSOLUTE_PATH" != "true" ]]; then
+        # Create volume if needed
+        if ! docker volume ls --format '{{.Name}}' | grep -q "^${VOLUME_NAME}$"; then
+            echo "Create docker volume: $VOLUME_NAME"
 
-        docker volume create "$VOLUME_NAME"
+            docker volume create "$VOLUME_NAME"
 
-        docker run --rm \
-            -u 0 \
-            -v $VOLUME_NAME:/data \
-            alpine \
-            sh -c 'chmod 777 /data'
-    else
-        echo "Reuse existing docker volume: $VOLUME_NAME"
+            docker run --rm \
+                -u 0 \
+                -v $VOLUME_NAME:/data \
+                alpine \
+                sh -c 'chmod 777 /data'
+        else
+            echo "Reuse existing docker volume: $VOLUME_NAME"
+        fi
     fi
 
     # Mount volume with mode
