@@ -34,7 +34,7 @@ runs:
       id: app-token
       with:
         owner: ${{ github.repository_owner }}
-        app-id: ${{ inputs.app-id }}
+        client-id: ${{ inputs.app-id }}
         private-key: ${{ inputs.access-private-key }}
 
     - name: Setup SSH Keys
