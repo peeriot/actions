@@ -30,7 +30,7 @@ runs:
   using: "composite"
   steps:
     - name: Create Access Token
-      uses: actions/create-github-app-token@v1
+      uses: actions/create-github-app-token@v3
       id: app-token
       with:
         owner: ${{ github.repository_owner }}
@@ -45,7 +45,7 @@ runs:
           ${{ inputs.ssh-private-key }}
 
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         clean: false
         submodules: ${{ inputs.submodules }}
