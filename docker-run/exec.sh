@@ -94,7 +94,7 @@ fi
 if [[ -n "$DOCKER_RUN_TOKEN" ]]; then
     AUTH="$(echo "$DOCKER_RUN_TOKEN" | awk '{$1=$1}1')"
     AUTH="x-access-token:$AUTH"
-    AUTH="$(printf "$AUTH" | base64)"
+    AUTH="$(printf '%s' "$AUTH" | base64 -w0)"
 
     SCRIPT="$SCRIPT; \
         git config --global http.\"https://github.com\".extraheader \"Authorization: Basic $AUTH\"; \
