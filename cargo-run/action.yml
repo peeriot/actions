@@ -1,0 +1,116 @@
+name: 'Cargo Run'
+description: |
+  Run a command in a Rust CI image with the standard cargo, rustup and target
+  cache volumes already mounted.
+
+  A thin wrapper over `docker-run` for the common case. It fills in the registry
+  login, the container user and the three cache volumes, so a call site states
+  the image, the token and the command and nothing else.
+
+  Reach for `docker-run` directly when a job needs volumes or container options
+  this does not cover.
+
+inputs:
+  image:
+    description: 'Image to run the command in'
+    required: true
+  run:
+    description: 'Command to run inside the container'
+    required: true
+  token:
+    description: 'Access token for github repositories, forwarded to the container'
+    required: false
+    default: ''
+  env:
+    description: |
+      Extra environment for the container, one KEY=VALUE per line.
+
+      Passed explicitly rather than inherited. `docker-run` forwards the ambient
+      environment of its own process, but a step-level `env:` on a call to a
+      composite action does not reliably reach that action's steps, and the
+      failure would be silent: the command runs, with the setting missing.
+    required: false
+    default: ''
+  workspace:
+    description: 'Workspace the target volume belongs to'
+    required: false
+    default: ${{ github.workspace }}
+  lockfile:
+    description: 'File the target volume is keyed on'
+    required: false
+    default: ${{ github.workspace }}/Cargo.lock
+  volumes:
+    description: 'Additional volumes, appended to the three standard ones'
+    required: false
+    default: ''
+  user:
+    description: 'User to run the container as'
+    required: false
+    default: user
+  registry:
+    description: 'Registry to pull the image from'
+    required: false
+    default: ghcr.io
+  username:
+    description: 'Registry user'
+    required: false
+    default: ${{ github.actor }}
+  password:
+    description: 'Registry password'
+    required: false
+    default: ${{ github.token }}
+  docker_network:
+    description: 'Docker Network ID'
+    required: false
+    default: ${{ job.container.network }}
+
+runs:
+  using: 'composite'
+  steps:
+    # `docker-run/exec.sh` is invoked directly instead of through
+    # `uses: peeriot/actions/docker-run@<ref>`. A composite action cannot
+    # reference a sibling by relative path, and pinning a ref here would either
+    # be unresolvable at the time this file is written or float independently of
+    # the ref the caller pinned. Both files ship in the same download, so the
+    # caller's pin covers them together.
+    - name: Run Cargo Command
+      shell: bash
+      env:
+        CARGO_RUN_ENV: ${{ inputs.env }}
+        DOCKER_RUN_IMAGE: ${{ inputs.image }}
+        DOCKER_RUN_USER: ${{ inputs.user }}
+        DOCKER_RUN_RUN: ${{ inputs.run }}
+        DOCKER_RUN_REGISTRY: ${{ inputs.registry }}
+        DOCKER_RUN_USERNAME: ${{ inputs.username }}
+        DOCKER_RUN_PASSWORD: ${{ inputs.password }}
+        DOCKER_RUN_FORWARD_CREDENTIALS: 'false'
+        DOCKER_RUN_DOCKER_NETWORK: ${{ inputs.docker_network }}
+        DOCKER_RUN_VOLUMES: |
+          cache-cargo:/usr/local/cargo
+          cache-rustup:/usr/local/rustup
+          target:${{ inputs.workspace }}/target,lockfiles=${{ inputs.lockfile }}
+          ${{ inputs.volumes }}
+        DOCKER_RUN_SETUP_KNOWN_HOSTS: 'true'
+        DOCKER_RUN_SSH_KEYS: ''
+        DOCKER_RUN_TOKEN: ${{ inputs.token }}
+        DOCKER_RUN_ENTRYPOINT: ''
+        DOCKER_RUN_REMOVE_ENTRYPOINT: ''
+      run: |
+        set -euo pipefail
+
+        # Export the requested environment into this process. exec.sh forwards
+        # everything exported here into the container, minus its own DOCKER_RUN_*
+        # and the runner's INPUT_*, so CARGO_RUN_ENV is dropped before the handover.
+        while IFS= read -r LINE; do
+          [[ -z "${LINE// }" ]] && continue
+          [[ "$LINE" == \#* ]] && continue
+          if [[ "$LINE" != *=* ]]; then
+            echo "cargo-run: 'env' expects KEY=VALUE per line, got: $LINE" >&2
+            exit 1
+          fi
+          export "${LINE?}"
+        done <<< "$CARGO_RUN_ENV"
+
+        unset CARGO_RUN_ENV
+
+        exec "$GITHUB_ACTION_PATH/../docker-run/exec.sh"
