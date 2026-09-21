@@ -1,0 +1,36 @@
+name: 'Setup Rust'
+description: >
+  Points cargo, rustup and sccache at the runner's work root, so their caches
+  survive between jobs and are shared by every repository on the runner.
+
+runs:
+  using: "composite"
+  steps:
+    - name: Export cache locations
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # GITHUB_WORKSPACE is the checkout, two levels below the work root, and
+        # the runner rewrites it per job - inside a job container it reads
+        # /__w/<repo>/<repo>, outside one it is the host path. cd and pwd turn
+        # that into an absolute path without a `..`, which cargo needs: it does
+        # not normalise CARGO_HOME, and an unnormalised one makes every package
+        # look duplicated.
+        root="$(cd "$GITHUB_WORKSPACE/../.." && pwd)"
+
+        # Cargo needs a default toolchain wherever no rust-toolchain.toml
+        # applies, which is the case for anything it resolves outside a
+        # checkout. The rustup home in use has one, so the shared home starts
+        # as a copy of it instead of starting empty.
+        source_home="${RUSTUP_HOME:-$HOME/.rustup}"
+        if [ ! -d "$root/rustup/toolchains" ] && [ -d "$source_home/toolchains" ]; then
+            mkdir -p "$root/rustup"
+            cp -a "$source_home/." "$root/rustup/"
+        fi
+
+        {
+            echo "CARGO_HOME=$root/cargo"
+            echo "RUSTUP_HOME=$root/rustup"
+            echo "SCCACHE_DIR=$root/_sccache"
+        } >> "$GITHUB_ENV"
