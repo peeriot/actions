@@ -19,6 +19,13 @@ runs:
         # look duplicated.
         root="$(cd "$GITHUB_WORKSPACE/../.." && pwd)"
 
+        # The runner creates the workspace and a job container runs as root, so
+        # git sees a repository owned by someone else and refuses to read it.
+        # actions/checkout works around that in a temporary HOME of its own,
+        # which no later step inherits, and a build script that embeds a
+        # revision then fails without saying so.
+        git config --global --add safe.directory '*'
+
         # Cargo needs a default toolchain wherever no rust-toolchain.toml
         # applies, which is the case for anything it resolves outside a
         # checkout. The rustup home in use has one, so the shared home starts
