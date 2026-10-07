@@ -1,15 +1,67 @@
 name: 'Setup Rust'
 description: >
   Points cargo, rustup and sccache at the runner's work root, so their caches
-  survive between jobs and are shared by every repository on the runner.
+  survive between jobs and are shared by every repository on the runner, and
+  installs rustup when the runner has none. Optionally installs a toolchain up
+  front, from a rust-toolchain file or by name.
+
+  Without either input this action sets no default toolchain: cargo then uses
+  the nearest rust-toolchain file, or whatever default the runner's shared
+  rustup home already has.
+
+inputs:
+  toolchain-file:
+    description: 'Path, relative to the workspace, to a rust-toolchain.toml or rust-toolchain to install and make the default, needs rustup >= 1.28, exclusive with toolchain'
+    required: false
+    default: ''
+  toolchain:
+    description: 'Toolchain to install and make the default, e.g. stable or 1.85.0, exclusive with toolchain-file'
+    required: false
+    default: ''
+  targets:
+    description: 'Space-separated targets to install, requires toolchain'
+    required: false
+    default: ''
+  components:
+    description: 'Space-separated components to install, requires toolchain'
+    required: false
+    default: ''
 
 runs:
   using: "composite"
   steps:
-    - name: Export cache locations
+    - name: Set up cargo and rustup
       shell: bash
+      env:
+        RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        TOOLCHAIN_FILE: ${{ inputs.toolchain-file }}
+        TOOLCHAIN: ${{ inputs.toolchain }}
+        TARGETS: ${{ inputs.targets }}
+        COMPONENTS: ${{ inputs.components }}
       run: |
         set -euo pipefail
+
+        if [ -n "$TOOLCHAIN_FILE" ] && [ -n "$TOOLCHAIN" ]; then
+            echo "::error::toolchain-file and toolchain are mutually exclusive"
+            exit 1
+        fi
+        if [ -z "$TOOLCHAIN" ] && { [ -n "$TARGETS" ] || [ -n "$COMPONENTS" ]; }; then
+            echo "::error::targets and components require toolchain"
+            exit 1
+        fi
+        if [ -n "$TOOLCHAIN_FILE" ]; then
+            case "$(basename "$TOOLCHAIN_FILE")" in
+                rust-toolchain.toml | rust-toolchain) ;;
+                *)
+                    echo "::error::toolchain-file '$TOOLCHAIN_FILE' must be named rust-toolchain.toml or rust-toolchain"
+                    exit 1
+                    ;;
+            esac
+            if [ ! -f "$TOOLCHAIN_FILE" ]; then
+                echo "::error::toolchain-file '$TOOLCHAIN_FILE' not found (relative to $PWD)"
+                exit 1
+            fi
+        fi
 
         # GITHUB_WORKSPACE is the checkout, two levels below the work root, and
         # the runner rewrites it per job - inside a job container it reads
@@ -26,18 +78,46 @@ runs:
         # revision then fails without saying so.
         git config --global --add safe.directory '*'
 
-        # Cargo needs a default toolchain wherever no rust-toolchain.toml
-        # applies, which is the case for anything it resolves outside a
-        # checkout. The rustup home in use has one, so the shared home starts
-        # as a copy of it instead of starting empty.
-        source_home="${RUSTUP_HOME:-$HOME/.rustup}"
-        if [ ! -d "$root/rustup/toolchains" ] && [ -d "$source_home/toolchains" ]; then
-            mkdir -p "$root/rustup"
-            cp -a "$source_home/." "$root/rustup/"
+        export CARGO_HOME="$root/cargo"
+        export SCCACHE_DIR="$root/_sccache"
+        {
+            echo "CARGO_HOME=$CARGO_HOME"
+            echo "SCCACHE_DIR=$SCCACHE_DIR"
+        } >> "$GITHUB_ENV"
+
+        # GitHub-hosted runners keep the image's rustup home; their work root
+        # does not persist.
+        if [ "$RUNNER_ENVIRONMENT" != "github-hosted" ]; then
+            export RUSTUP_HOME="$root/rustup"
+            echo "RUSTUP_HOME=$RUSTUP_HOME" >> "$GITHUB_ENV"
         fi
 
-        {
-            echo "CARGO_HOME=$root/cargo"
-            echo "RUSTUP_HOME=$root/rustup"
-            echo "SCCACHE_DIR=$root/_sccache"
-        } >> "$GITHUB_ENV"
+        # An earlier job on this runner may have installed rustup already.
+        if ! command -v rustup > /dev/null; then
+            [ -x "$CARGO_HOME/bin/cargo" ] \
+                || curl --proto '=https' --tlsv1.2 --retry 3 --max-time 120 -sSf https://sh.rustup.rs \
+                    | sh -s -- -y --no-modify-path --default-toolchain none
+            echo "$CARGO_HOME/bin" >> "$GITHUB_PATH"
+            export PATH="$CARGO_HOME/bin:$PATH"
+        fi
+
+        # Install up front: an explicit `cargo +toolchain` skips the targets of
+        # rust-toolchain.toml, and parallel cargo calls race on a fresh home.
+        if [ -n "$TOOLCHAIN_FILE" ]; then
+            (
+                unset RUSTUP_TOOLCHAIN
+                cd "$(dirname "$TOOLCHAIN_FILE")"
+                rustup toolchain install --no-self-update
+                name="$(rustup show active-toolchain)"
+                rustup default "${name%% *}"
+            )
+        elif [ -n "$TOOLCHAIN" ]; then
+            args=()
+            set -f
+            for target in $TARGETS; do args+=(--target "$target"); done
+            for component in $COMPONENTS; do args+=(--component "$component"); done
+            set +f
+            rustup toolchain install "$TOOLCHAIN" --profile minimal --no-self-update \
+                ${args[@]+"${args[@]}"}
+            rustup default "$TOOLCHAIN"
+        fi
